@@ -38,6 +38,8 @@
         $('#btnC').click(function(e) {
             btnCClick(e);
         });
+
+        $('#sounds').change(getSound);
         init();
     });
     
@@ -94,7 +96,7 @@
     function clock(hour,minute,second,hide){
         var canvas = $('#mycanvas')[0];
         var ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; 
+        ctx.fillStyle = 'rgba(0,0,0, 0.4)'; 
         ctx.fillRect(0,0,canvas.width,canvas.height);
         var cx = canvas.width/2;
         var cy = canvas.height/2;
@@ -105,7 +107,7 @@
         for(var i = 0; i < 60; i++) {
             var px = getX(cx,i/60,0.9);
             var py = getY(cy,i/60,0.9);
-            ctx.fillStyle = 'rgb(0, 255, 0)'; 
+            ctx.fillStyle = 'rgb(255, 159, 70)'; 
             ctx.beginPath();
             ctx.arc(px, py, 2, 0, Math.PI*2, false);
             ctx.fill();
@@ -114,7 +116,7 @@
         for(var i = 0; i < 12; i++) {
             var px = getX(cx,i/12,0.9);
             var py = getY(cy,i/12,0.9);
-            ctx.fillStyle = 'rgb(255, 255, 0)'; 
+            ctx.fillStyle = 'rgb(255, 159, 70)'; 
             ctx.beginPath();
             ctx.arc(px, py, 5, 0, Math.PI*2, false);
             ctx.fill();
@@ -151,15 +153,16 @@
 
     // 変数宣言
     var active = false;
+    var pause = false;
     var startTime = 0;
     var period = 0;
     var rest = 0;
     var etime = 0;
+    var sound = "pin1";
     
     // ボタンの初期設定
     function init(){
-        $('#btnA').prop('disabled', false);
-        $('#btnB').prop('disabled', true);
+        $('#btnA').prop('disabled', false).text("開始");
         $('#btnC').prop('disabled', true);
         btnCClick(null);
     }
@@ -174,47 +177,56 @@
             ctx.drawImage(img, 0, 0, 300, 300);
         };
         var audio = new Audio();
-        audio.src = "pin.wav";
+        if (sound == "pin1") {
+            audio.src = "pin.wav";
+        } else if (sound == "pin2") {
+            audio.src = "pin2.mp3";
+        } else if (sound == "pin3") {
+            audio.src = "pin3.mp3";
+        } else if (sound == "pin4") {
+            audio.src = "pin4.mp3";
+        } else if (sound == "pin5") {
+            audio.src = "pin5.mp3";
+        } else if (sound == "pin6") {
+            audio.src = "pin6.mp3";
+        } else if (sound == "pin7") {
+            audio.src = "pin7.mp3";
+        }
         audio.play();        
     }
     
     // ButtonAがクリックされた時の処理
     function btnAClick(e){
-        $('#btnA').prop('disabled', true);
-        $('#btnB').prop('disabled', false);
-        $('#btnC').prop('disabled', false);
-        active = true;
-        startTime = new Date();
-
+        getSound();
+        if (!active && !pause) {
+            active = true;
+            pause = false;
+            startTime = new Date();
+            $('#btnA').text("停止");
+            $('#btnC').prop('disabled', false);
+        } else if (active) {
+            active = false;
+            pause = true;
+            $('#btnA').text('再開');
+        } else if (!active && pause) {
+            active = true;
+            pause = false;
+            startTime = new Date(new Date() - etime * 1000); 
+            $('#btnA').text('停止');
+        }
+        
     }
 
     // ButtonBがクリックされた時の処理
-    function btnBClick(e){
-        $('#btnA').prop('disabled', false);
-        $('#btnB').prop('disabled', false);
-        $('#btnC').prop('disabled', false);
-        if (active) {
-            // 一時停止
-            active = false;
-            $('#btnB').text('再開');
-        } else {
-            // 再開
-            active = true;
-            startTime = new Date(new Date() - etime * 1000); // 経過時間を引き継ぎ
-            $('#btnB').text('停止');
-        }       
-    }
 
     // ButtonCがクリックされた時の処理
     function btnCClick(e){
-        $('#btnA').prop('disabled', false);
-        $('#btnB').prop('disabled', true);
+        $('#btnA').prop('disabled', false).text("開始");
         $('#btnC').prop('disabled', true);
         alarm();
+        updateTime();
         active = false;
-        period = 60* parseInt( $("#minute").val() ) + parseInt( $("#second").val() );
-        $("#time").html("経過時間： 0");
-        $("#remain").html("残り時間： " + period);
+        pause = false;
     }
     
  
@@ -228,20 +240,94 @@
             $("#time").html("経過時間： " + etime + "秒");
             $("#remain").html("残り時間： " + m + "分" + s + "秒");
             analog(rest);
+            var rh = parseInt(etime/3600);
+            var rm = parseInt(etime/60);
+            var rs = parseInt(etime - rm*60);
             if (rest <= 0) {
                 active = false;
                 alarm();
+                $('#btnA').text('開始');
+                const label = document.getElementById("labelInput").value;
+                let message;
+                if (label.trim() !== "") {
+                    message = label;
+                } else {
+                    message = "タイマー";
+                }
+                alert(rh + "時間" + rm + "分" + rs + "秒" + message);
             }
-
         }
-        
-    } 
+    }
+
+    function getSound() {
+        sound = document.getElementById("sounds").value;     
+    }
+
+    // 時間の更新
+    $(function() {
+        $("#hour, #minute, #second").on("input", function() {
+            updateTime();
+        });
+    });
+
+    function updateTime() {
+        const h = parseInt($("#hour").val()) || 0;
+        const m = parseInt($("#minute").val()) || 0;
+        const s = parseInt($("#second").val()) || 0;
+        period = h * 3600 + m * 60 + s;
+        rest = period;
+        if(h > 0){
+            $("#remain").html("残り時間： " + h + "時間" + m + "分" + s + "秒");
+        }else{
+            $("#remain").html("残り時間： " + m + "分" + s + "秒");
+        }
+        $("#time").html("経過時間： 0秒");
+        var hstr = "時間: ";
+        var hstr1 = "";
+            if(h/10 >= 1){
+                for(let i = 0; i < Math.floor(h / 10); i++){
+                hstr += "◎";
+            }
+        }
+        for(let i = 0; i < h%10; i++){
+            hstr1 += "〇";
+        }
+        $("#hourStr").html(hstr + hstr1);
+        if(h <= 0){
+            $("#hourStr").html("");
+        }
+        var mstr = "分: ";
+        var mstr1 = "";
+            if(m/10 >= 1){
+                for(let i = 0; i < Math.floor(m / 10); i++){
+                mstr += "◎";
+            }
+        }
+        for(let i = 0; i < m%10; i++){
+            mstr1 += "〇";
+        }
+        $("#minuteStr").html(mstr + mstr1);
+        var sstr = "秒: ";
+        var sstr1 = "";
+            if(s/10 >= 1){
+                for(let i = 0; i < Math.floor(s / 10); i++){
+                sstr += "◎";
+            }
+        }
+        for(let i = 0; i < s%10; i++){
+            sstr1 += "〇";
+        }
+        $("#secondStr").html(sstr + sstr1);
+    }
 
   </script>
 </head>
 <body>
+    <h2 style="font-size:28px; margin-bottom:20px; color: #ffff">タイマー</h2>
+
     <canvas id="mycanvas" width="200" height="200">Test</canvas>
 
+    <div id="hourStr">〇</div>
     <div id="minuteStr">〇</div>
     <div id="secondStr">〇</div>
 
@@ -249,7 +335,25 @@
     <div id="time">Time</div>
     <button id="btnA">開始</button>   
     <button id="btnC">キャンセル</button>  
+    <input type="number" id="hour" value=0 >
+    <a style="position:absolute; top:520px; left:29%; width:80px; height:40px; color: #ffff">時間</a>
     <input type="number" id="minute" value=3 >
+    <a style="position:absolute; top:520px; left:62%; width:80px; height:40px; color: #ffff">分</a>
     <input type="number" id="second" value=0 >
+    <a style="position:absolute; top:520px; left:92%; width:80px; height:40px; color: #ffff">秒</a>
+
+    <a style="position:absolute; top:600px; left:10%; width:80px; height:40px; color: #ffff">ラベル</a>
+    <input type="label" id="labelInput" placeholder="タイマー">
+    <a style="position:absolute; top:640px; left:10%; width:120px; height:40px; color: #ffff">タイマー終了時</a>
+    <select id="sounds" name="sounds">
+        <option value="pin1">pin1</option>
+        <option value="pin2">pin2</option>
+        <option value="pin3">pin3</option>
+        <option value="pin4">pin4</option>
+        <option value="pin5">pin5</option>
+        <option value="pin6">pin6</option>
+        <option value="pin7">pin7</option>
+    </select>
+
 </body>
 </html>
